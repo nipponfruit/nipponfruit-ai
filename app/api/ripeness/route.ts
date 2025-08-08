@@ -8,8 +8,8 @@ type Storage = "room" | "fridge" | "vegroom" | "cooldark";
 type Climate = "cold" | "normal" | "hot";
 
 type Payload = {
-  sku: string;
-  receivedAt: string; // yyyy-mm-dd
+  sku: string;              // yyyy-mm-dd
+  receivedAt: string;
   storage: Storage;
   climate: Climate;
   issues?: string[];
@@ -49,16 +49,12 @@ export async function POST(req: NextRequest) {
     body.receivedAt = body.receivedAt.replace(/\//g, "-");
 
     const rule = rules.find((r) => r.sku === body.sku);
-    if (!rule) {
-      return NextResponse.json({ error: "unknown sku" }, { status: 400 });
-    }
+    if (!rule) return NextResponse.json({ error: "unknown sku" }, { status: 400 });
 
     const readyDate = addDays(
       new Date(body.receivedAt),
       calcDays(rule, body.storage, body.climate)
-    )
-      .toISOString()
-      .slice(0, 10);
+    ).toISOString().slice(0, 10);
 
     let summary =
       `目安の食べ頃: ${readyDate}\n` +
@@ -66,6 +62,7 @@ export async function POST(req: NextRequest) {
       `よくあるNG: ${rule.donts.join("、")}\n` +
       `食べ頃のサイン: ${rule.ready_signs.join("、")}`;
 
+    // GPT-5 nanoで整形（失敗時はフェイルセーフで上のsummaryを返す）
     try {
       const sys =
         "あなたは果物の保存と食べ頃案内の専門家です。安全第一で、断定は避け、丁寧に短く。箇条書き中心。";
@@ -99,22 +96,14 @@ export async function POST(req: NextRequest) {
       });
 
       const content = resp.choices?.[0]?.message?.content;
-      if (typeof content === "string" && content.trim().length > 0) {
-        summary = content.trim();
-      }
+      if (typeof content === "string" && content.trim()) summary = content.trim();
     } catch {
-      // LLM失敗時はフェイルセーフ: summary をそのまま返す
+      /* ignore */
     }
 
-    return NextResponse.json({
-      sku: rule.sku,
-      name: rule.name,
-      readyDate,
-      summary,
-    });
+    return NextResponse.json({ sku: rule.sku, name: rule.name, readyDate, summary });
   } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : "server error";
+    const message = err instanceof Error ? err.message : "server error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

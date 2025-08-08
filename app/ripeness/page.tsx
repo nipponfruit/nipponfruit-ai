@@ -9,17 +9,32 @@ const FRUITS = [
   { sku: "shine-muscat", label: "シャインマスカット" },
 ] as const;
 
-type ApiResult = {
-  sku: string;
-  name: string;
-  readyDate: string;
-  summary: string;
-};
+type Sku = (typeof FRUITS)[number]["sku"];
+
+const STORAGE_OPTIONS: ReadonlyArray<{ value: Storage; label: string }> = [
+  { value: "room", label: "常温" },
+  { value: "cooldark", label: "冷暗所" },
+  { value: "vegroom", label: "野菜室" },
+  { value: "fridge", label: "冷蔵庫" },
+] as const;
+
+const CLIMATE_OPTIONS: ReadonlyArray<{ value: Climate; label: string }> = [
+  { value: "cold", label: "寒い" },
+  { value: "normal", label: "普通" },
+  { value: "hot", label: "暑い" },
+] as const;
+
+type ApiResult = { sku: string; name: string; readyDate: string; summary: string };
+
+// 型ガード
+function isSku(v: string): v is Sku {
+  return FRUITS.some((f) => f.sku === v);
+}
 
 export default function RipenessPage() {
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [receivedAt, setReceivedAt] = useState(today);
-  const [sku, setSku] = useState<(typeof FRUITS)[number]["sku"]>(FRUITS[0].sku);
+  const [sku, setSku] = useState<Sku>(FRUITS[0].sku);
   const [storage, setStorage] = useState<Storage>("room");
   const [climate, setClimate] = useState<Climate>("normal");
   const [issues, setIssues] = useState<string[]>([]);
@@ -27,10 +42,11 @@ export default function RipenessPage() {
   const [result, setResult] = useState<ApiResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // URLクエリからsku初期化
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     const qsSku = p.get("sku");
-    if (qsSku && FRUITS.some((f) => f.sku === qsSku)) setSku(qsSku as any);
+    if (qsSku && isSku(qsSku)) setSku(qsSku);
   }, []);
 
   const toggleIssue = (v: string) =>
@@ -45,19 +61,11 @@ export default function RipenessPage() {
       const res = await fetch("/api/ripeness", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sku,
-          receivedAt: normalizedDate,
-          storage,
-          climate,
-          issues,
-        }),
+        body: JSON.stringify({ sku, receivedAt: normalizedDate, storage, climate, issues }),
       });
-
-      const json: unknown = await res.json();
+      const json = (await res.json()) as unknown;
       if (!res.ok) {
-        const msg =
-          (json as { error?: string })?.error ?? "error";
+        const msg = (json as { error?: string })?.error ?? "error";
         throw new Error(msg);
       }
       setResult(json as ApiResult);
@@ -86,7 +94,10 @@ export default function RipenessPage() {
           <label className="block text-sm mb-1">② 果物</label>
           <select
             value={sku}
-            onChange={(e) => setSku(e.target.value as any)}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (isSku(v)) setSku(v);
+            }}
             className="border rounded px-3 py-2"
           >
             {FRUITS.map((f) => (
@@ -100,19 +111,14 @@ export default function RipenessPage() {
         <li>
           <label className="block text-sm mb-1">③ 保存環境</label>
           <div className="space-x-4">
-            {[
-              ["room", "常温"],
-              ["cooldark", "冷暗所"],
-              ["vegroom", "野菜室"],
-              ["fridge", "冷蔵庫"],
-            ].map(([val, label]) => (
-              <label key={val}>
+            {STORAGE_OPTIONS.map(({ value, label }) => (
+              <label key={value}>
                 <input
                   type="radio"
                   name="storage"
-                  value={val}
-                  checked={storage === (val as Storage)}
-                  onChange={() => setStorage(val as Storage)}
+                  value={value}
+                  checked={storage === value}
+                  onChange={() => setStorage(value)}
                   className="mr-1"
                 />
                 {label}
@@ -124,18 +130,14 @@ export default function RipenessPage() {
         <li>
           <label className="block text-sm mb-1">④ 気温帯</label>
           <div className="space-x-4">
-            {[
-              ["cold", "寒い"],
-              ["normal", "普通"],
-              ["hot", "暑い"],
-            ].map(([val, label]) => (
-              <label key={val}>
+            {CLIMATE_OPTIONS.map(({ value, label }) => (
+              <label key={value}>
                 <input
                   type="radio"
                   name="climate"
-                  value={val}
-                  checked={climate === (val as Climate)}
-                  onChange={() => setClimate(val as Climate)}
+                  value={value}
+                  checked={climate === value}
+                  onChange={() => setClimate(value)}
                   className="mr-1"
                 />
                 {label}
@@ -152,15 +154,15 @@ export default function RipenessPage() {
               ["hard", "固い"],
               ["soft", "柔らかすぎ"],
               ["spots", "見た目の斑点"],
-            ].map(([val, label]) => (
-              <label key={val}>
+            ].map(([v, l]) => (
+              <label key={v}>
                 <input
                   type="checkbox"
-                  checked={issues.includes(val)}
-                  onChange={() => toggleIssue(val)}
+                  checked={issues.includes(v)}
+                  onChange={() => toggleIssue(v)}
                   className="mr-1"
                 />
-                {label}
+                {l}
               </label>
             ))}
           </div>

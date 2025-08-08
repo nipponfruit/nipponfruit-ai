@@ -114,9 +114,20 @@ export default function RipenessPage() {
           issues,
         }),
       });
-      const json = (await res.json()) as ApiResult | { error: string };
-      if (!res.ok) throw new Error((json as any).error || "error");
-      setResult(json as ApiResult);
+      type ApiError = { error: string };
+
+function isApiError(x: unknown): x is ApiError {
+  return typeof x === "object" && x !== null && "error" in x;
+}
+
+const data: unknown = await res.json();
+
+if (!res.ok) {
+  const msg = isApiError(data) ? data.error : "error";
+  throw new Error(msg);
+}
+
+setResult(data as ApiResult);
     } catch (e) {
       setError(e instanceof Error ? e.message : "unknown error");
     } finally {

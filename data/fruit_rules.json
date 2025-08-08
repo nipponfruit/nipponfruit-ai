@@ -1,22 +1,232 @@
 [
-  {
-    "sku": "beni-haruka",
-    "name": "紅はるか",
-    "category": "さつまいも",
-    "ripen_room_days": 5,
-    "ripen_cool_days": 8,
-    "temp_advice": "13〜16℃の冷暗所で新聞紙に包んで保存。冷蔵庫は低温障害の恐れあり。",
-    "ready_signs": ["甘い香りが強まる", "切断面がしっとり"],
-    "donts": ["冷蔵長期保存", "直射日光"]
-  },
-  {
-    "sku": "shine-muscat",
-    "name": "シャインマスカット",
-    "category": "ぶどう",
-    "ripen_room_days": 0,
-    "ripen_cool_days": 0,
-    "temp_advice": "野菜室で保存。乾燥防止に紙で包む。食べる直前に洗う。",
-    "ready_signs": ["果粒に張りがある", "白い粉(ブルーム)が均一"],
-    "donts": ["常温での長期放置", "洗ってから保存"]
-  }
-]
+    /* ===== メロン ===== */
+    {
+      "sku": "melon-higo-green",
+      "name": "肥後グリーンメロン",
+      "category": "メロン",
+      "ripen_room_days": 3,
+      "ripen_cool_days": 5,
+      "temp_advice": "常温で追熟し、食べ頃になったら冷蔵庫で2〜3時間冷やしてからお召し上がりください。",
+      "ready_signs": ["香りが強くなる", "お尻部分がやや柔らかくなる"],
+      "donts": ["未熟なうちに冷蔵保存", "直射日光や高温"]
+    },
+    {
+      "sku": "melon-arus",
+      "name": "アールスメロン",
+      "category": "メロン",
+      "ripen_room_days": 3,
+      "ripen_cool_days": 5,
+      "temp_advice": "常温で追熟後、食べる直前に冷蔵庫で軽く冷やすと風味が引き立ちます。",
+      "ready_signs": ["甘い香りが漂う", "お尻が少し柔らかい"],
+      "donts": ["長時間の直射日光", "未熟なうちの冷蔵保存"]
+    },
+  
+    /* ===== すいか ===== */
+    {
+      "sku": "suika-oodama",
+      "name": "大玉すいか",
+      "category": "すいか",
+      "ripen_room_days": 0,
+      "ripen_cool_days": 5,
+      "temp_advice": "涼しい場所または冷蔵庫で保存し、カット後はラップで包んで冷蔵し、2日以内にお召し上がりください。",
+      "ready_signs": ["叩くと低い音が響く", "ツルの周りが少しへこむ"],
+      "donts": ["高温放置", "カット後の室温放置"]
+    },
+    {
+      "sku": "suika-raou-sweet",
+      "name": "羅皇ザスウィート",
+      "category": "すいか",
+      "ripen_room_days": 0,
+      "ripen_cool_days": 5,
+      "temp_advice": "食べる直前に冷やしすぎないよう注意。カット後はラップで包み冷蔵庫で保存。",
+      "ready_signs": ["叩くと鈍い音がする", "果皮の縞模様がはっきりしている"],
+      "donts": ["直射日光", "カット後の放置"]
+    },
+    {
+      "sku": "suika-kingorao",
+      "name": "金色羅皇",
+      "category": "すいか",
+      "ripen_room_days": 0,
+      "ripen_cool_days": 5,
+      "temp_advice": "涼しい場所か冷蔵庫で保存。カット後は冷蔵で2日以内に消費。",
+      "ready_signs": ["叩くとポンと低い音が響く"],
+      "donts": ["高温・多湿", "カット後の室温放置"]
+    },
+    {
+      "sku": "suika-kodama",
+      "name": "小玉すいか",
+      "category": "すいか",
+      "ripen_room_days": 0,
+      "ripen_cool_days": 4,
+      "temp_advice": "冷蔵庫（野菜室）で保存。カット後は冷蔵で1〜2日以内に。",
+      "ready_signs": ["叩くとやや低い音がする", "果皮にツヤがある"],
+      "donts": ["直射日光", "冷やしすぎ"]
+    },
+  
+    /* ===== いちご ===== */
+    {
+      "sku": "ichigo",
+      "name": "いちご",
+      "category": "ベリー",
+      "ripen_room_days": 0,
+      "ripen_cool_days": 0,
+      "temp_advice": "ヘタをつけたまま洗わずにパックのまま野菜室。食べる直前に洗う。",
+      "ready_signs": ["全体が赤く色づく", "ヘタの緑色が鮮やか"],
+      "donts": ["洗ってから保存", "重ねて保存"]
+    },
+  
+    /* ===== 柑橘類 ===== */
+    {
+      "sku": "mikan",
+      "name": "みかん",
+      "category": "柑橘類",
+      "ripen_room_days": 0,
+      "ripen_cool_days": 7,
+      "temp_advice": "風通しの良い涼しい場所で保存。長期保存は野菜室で。",
+      "ready_signs": ["皮の色が濃い", "ヘタが少ししなやか"],
+      "donts": ["湿気の多い場所", "底面に密着"]
+    },
+    {
+      "sku": "shiranui",
+      "name": "不知火",
+      "category": "柑橘類",
+      "ripen_room_days": 5,
+      "ripen_cool_days": 14,
+      "temp_advice": "常温で追熟後、野菜室で保存。",
+      "ready_signs": ["香りが強くなる", "皮がやや柔らかい"],
+      "donts": ["直射日光", "乾燥"]
+    },
+    {
+      "sku": "paul-kan",
+      "name": "パール柑",
+      "category": "柑橘類",
+      "ripen_room_days": 0,
+      "ripen_cool_days": 21,
+      "temp_advice": "冷暗所または野菜室で保存。乾燥防止に紙で包む。",
+      "ready_signs": ["重みがある", "香りが立つ"],
+      "donts": ["高温多湿", "傷つけたまま保存"]
+    },
+    {
+      "sku": "banpeiyu",
+      "name": "晩白柚",
+      "category": "柑橘類",
+      "ripen_room_days": 0,
+      "ripen_cool_days": 30,
+      "temp_advice": "冷暗所〜野菜室で保存。香り移り防止のため別保管。",
+      "ready_signs": ["重量感", "皮色が均一"],
+      "donts": ["直射日光", "暖房直撃"]
+    },
+  
+    /* ===== ぶどう ===== */
+    {
+      "sku": "shine-muscat",
+      "name": "シャインマスカット",
+      "category": "ぶどう",
+      "ripen_room_days": 0,
+      "ripen_cool_days": 0,
+      "temp_advice": "野菜室で保存し、食べる直前に洗う。",
+      "ready_signs": ["果粒に張りがある", "白い粉(ブルーム)が均一"],
+      "donts": ["常温放置", "洗ってから保存"]
+    },
+    {
+      "sku": "kyoho",
+      "name": "巨峰",
+      "category": "ぶどう",
+      "ripen_room_days": 0,
+      "ripen_cool_days": 0,
+      "temp_advice": "房ごと新聞紙で包み野菜室。食べる直前に洗う。",
+      "ready_signs": ["粒に張り", "ブルームが均一"],
+      "donts": ["常温放置", "湿気"]
+    },
+  
+    /* ===== なし ===== */
+    {
+      "sku": "hosui-nashi",
+      "name": "豊水梨",
+      "category": "なし",
+      "ripen_room_days": 0,
+      "ripen_cool_days": 7,
+      "temp_advice": "ポリ袋に入れて野菜室で保存。早めに食べる。",
+      "ready_signs": ["重みがある", "皮にツヤ"],
+      "donts": ["常温長期放置"]
+    },
+    {
+      "sku": "akizuki-nashi",
+      "name": "秋月梨",
+      "category": "なし",
+      "ripen_room_days": 0,
+      "ripen_cool_days": 7,
+      "temp_advice": "ポリ袋に入れ野菜室で保存。",
+      "ready_signs": ["重みがある", "色づき均一"],
+      "donts": ["常温放置"]
+    },
+    {
+      "sku": "shinko-nashi",
+      "name": "新高梨",
+      "category": "なし",
+      "ripen_room_days": 0,
+      "ripen_cool_days": 7,
+      "temp_advice": "野菜室で保存。",
+      "ready_signs": ["香りが立つ", "重みがある"],
+      "donts": ["高温"]
+    },
+  
+    /* ===== かき ===== */
+    {
+      "sku": "taishu-kaki",
+      "name": "太秋柿",
+      "category": "かき",
+      "ripen_room_days": 2,
+      "ripen_cool_days": 7,
+      "temp_advice": "常温で追熟後、野菜室で保存。",
+      "ready_signs": ["色づきが均一", "ヘタ周りがやや柔らかい"],
+      "donts": ["未熟のまま冷蔵"]
+    },
+  
+    /* ===== くり ===== */
+    {
+      "sku": "kuri",
+      "name": "くり",
+      "category": "くり",
+      "ripen_room_days": 0,
+      "ripen_cool_days": 10,
+      "temp_advice": "新聞紙で包みチルド室で保存。冷凍保存も可。",
+      "ready_signs": ["皮につや", "重みがある"],
+      "donts": ["常温長期保存", "濡れたまま保存"]
+    },
+  
+    /* ===== もも ===== */
+    {
+      "sku": "momo",
+      "name": "もも",
+      "category": "もも",
+      "ripen_room_days": 1,
+      "ripen_cool_days": 2,
+      "temp_advice": "常温で追熟し、食べる直前に軽く冷やす。",
+      "ready_signs": ["香りが強い", "肩部分が柔らかい"],
+      "donts": ["未熟なまま冷蔵保存"]
+    },
+  
+    /* ===== さつまいも ===== */
+    {
+      "sku": "silk-sweet",
+      "name": "シルクスイート",
+      "category": "さつまいも",
+      "ripen_room_days": 0,
+      "ripen_cool_days": 0,
+      "temp_advice": "13〜16℃の冷暗所で新聞紙に包んで保存。",
+      "ready_signs": ["甘い香り", "皮にハリ"],
+      "donts": ["冷蔵保存", "直射日光"]
+    },
+    {
+      "sku": "beni-haruka",
+      "name": "紅はるか",
+      "category": "さつまいも",
+      "ripen_room_days": 0,
+      "ripen_cool_days": 0,
+      "temp_advice": "冷暗所で保存し、低温障害に注意。",
+      "ready_signs": ["甘い香り", "切断面がしっとり"],
+      "donts": ["冷蔵長期保存", "直射日光"]
+    }
+  ]
+  

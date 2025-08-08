@@ -24,7 +24,11 @@ type FruitRule = {
   temp_advice: string;
   ready_signs: string[];
   donts: string[];
+  // ここを追加（任意項目）
+  max_stock?: number;
+  areas?: { name: string; count?: number }[];
 };
+
 
 const rules: FruitRule[] = rawRules as FruitRule[];
 

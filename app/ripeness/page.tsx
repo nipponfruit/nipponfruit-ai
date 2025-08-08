@@ -1,40 +1,42 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import rulesRaw from "@/data/fruit_rules.json";
 
-type Storage = "room" | "fridge" | "vegroom" | "cooldark";
-type Climate = "cold" | "normal" | "hot";
+type FruitRule = {
+  sku: string;
+  name: string;
+  category: string;
+  ripen_room_days: number;
+  ripen_cool_days: number;
+  temp_advice: string;
+  ready_signs: string[];
+  donts: string[];
+  max_stock?: number;
+  areas?: { name: string; count?: number }[];
+};
 
-const FRUITS = [
-  { sku: "beni-haruka", label: "紅はるか" },
-  { sku: "shine-muscat", label: "シャインマスカット" },
-] as const;
+const RULES = rulesRaw as FruitRule[];
 
-type Sku = (typeof FRUITS)[number]["sku"];
-
-const STORAGE_OPTIONS: ReadonlyArray<{ value: Storage; label: string }> = [
-  { value: "room", label: "常温" },
-  { value: "cooldark", label: "冷暗所" },
-  { value: "vegroom", label: "野菜室" },
-  { value: "fridge", label: "冷蔵庫" },
-] as const;
-
-const CLIMATE_OPTIONS: ReadonlyArray<{ value: Climate; label: string }> = [
-  { value: "cold", label: "寒い" },
-  { value: "normal", label: "普通" },
-  { value: "hot", label: "暑い" },
-] as const;
-
-type ApiResult = { sku: string; name: string; readyDate: string; summary: string };
-
-// 型ガード
-function isSku(v: string): v is Sku {
-  return FRUITS.some((f) => f.sku === v);
+// カテゴリ → 品目[] に整形
+function groupByCategory(rules: FruitRule[]) {
+  const map = new Map<string, { sku: string; label: string }[]>();
+  for (const r of rules) {
+    if (!map.has(r.category)) map.set(r.category, []);
+    map.get(r.category)!.push({ sku: r.sku, label: r.name });
+  }
+  // 表示順を安定させる（カテゴリ名順）
+  return Array.from(map.entries())
+    .sort(([a], [b]) => a.localeCompare(b, "ja"))
+    .map(([category, items]) => ({
+      category,
+      items: items.sort((a, b) => a.label.localeCompare(b.label, "ja")),
+    }));
 }
 
 export default function RipenessPage() {
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const [receivedAt, setReceivedAt] = useState(today);
-  const [sku, setSku] = useState<Sku>(FRUITS[0].sku);
+  const grouped = useMemo(() => groupByCategory(RULES), []);
+  const defaultSku = grouped[0]?.items[0]?.sku ?? "";
+  const [sku, setSku] = useState(defaultSku);
   const [storage, setStorage] = useState<Storage>("room");
   const [climate, setClimate] = useState<Climate>("normal");
   const [issues, setIssues] = useState<string[]>([]);
@@ -56,6 +58,20 @@ export default function RipenessPage() {
     setLoading(true);
     setError(null);
     setResult(null);
+  
+    // ▼ここからバリデーション
+    if (!sku || !RULES.some(r => r.sku === sku)) {
+      setError("果物の選択が正しくありません。");
+      setLoading(false);
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(receivedAt.replace(/\//g, "-"))) {
+      setError("受け取った日が正しい形式（YYYY-MM-DD）ではありません。");
+      setLoading(false);
+      return;
+    }
+    // ▲ここまでバリデーション
+  
     try {
       const normalizedDate = receivedAt.replace(/\//g, "-");
       const res = await fetch("/api/ripeness", {
@@ -63,18 +79,16 @@ export default function RipenessPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sku, receivedAt: normalizedDate, storage, climate, issues }),
       });
-      const json = (await res.json()) as unknown;
-      if (!res.ok) {
-        const msg = (json as { error?: string })?.error ?? "error";
-        throw new Error(msg);
-      }
-      setResult(json as ApiResult);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "unknown error");
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "error");
+      setResult(json);
+    } catch (e) {
+      setError(e.message);
     } finally {
       setLoading(false);
     }
   };
+  
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
@@ -91,22 +105,19 @@ export default function RipenessPage() {
         </li>
 
         <li>
-          <label className="block text-sm mb-1">② 果物</label>
-          <select
+        <label className="block text-sm mb-1">② 果物</label>
+        <select
             value={sku}
-            onChange={(e) => {
-              const v = e.target.value;
-              if (isSku(v)) setSku(v);
-            }}
-            className="border rounded px-3 py-2"
-          >
+            onChange={(e) => setSku(e.target.value)}
+            className="border rounded px-3 py-2 w-full whitespace-normal">
             {FRUITS.map((f) => (
-              <option key={f.sku} value={f.sku}>
-                {f.label}
-              </option>
-            ))}
-          </select>
-        </li>
+        <option key={f.sku} value={f.sku}>
+            {f.label}
+        </option>
+  ))}
+</select>
+
+      </li>
 
         <li>
           <label className="block text-sm mb-1">③ 保存環境</label>

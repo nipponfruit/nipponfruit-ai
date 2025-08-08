@@ -1,13 +1,14 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import rulesRaw from "@/data/fruit_rules.json";
 
+/** ==== types ==== */
 type FruitRule = {
   sku: string;
   name: string;
   category: string;
-  ripen_room_days: number;
-  ripen_cool_days: number;
+  ripen_room_days?: number;
+  ripen_cool_days?: number;
   temp_advice: string;
   ready_signs: string[];
   donts: string[];
@@ -15,16 +16,26 @@ type FruitRule = {
   areas?: { name: string; count?: number }[];
 };
 
+// DOM の Storage と名前衝突を避けるため別名にする
+type FruitStorage = "room" | "fridge" | "vegroom" | "cooldark";
+type Climate = "cold" | "normal" | "hot";
+
+type ApiResult = {
+  sku: string;
+  name: string;
+  readyDate: string;
+  summary: string;
+};
+
 const RULES = rulesRaw as FruitRule[];
 
-// カテゴリ → 品目[] に整形
+/** カテゴリ → 品目[] に整形（表示順を安定） */
 function groupByCategory(rules: FruitRule[]) {
   const map = new Map<string, { sku: string; label: string }[]>();
   for (const r of rules) {
     if (!map.has(r.category)) map.set(r.category, []);
     map.get(r.category)!.push({ sku: r.sku, label: r.name });
   }
-  // 表示順を安定させる（カテゴリ名順）
   return Array.from(map.entries())
     .sort(([a], [b]) => a.localeCompare(b, "ja"))
     .map(([category, items]) => ({
@@ -33,18 +44,36 @@ function groupByCategory(rules: FruitRule[]) {
     }));
 }
 
+const STORAGE_OPTIONS: { value: FruitStorage; label: string }[] = [
+  { value: "room", label: "常温" },
+  { value: "cooldark", label: "冷暗所" },
+  { value: "vegroom", label: "野菜室" },
+  { value: "fridge", label: "冷蔵庫" },
+];
+
+const CLIMATE_OPTIONS: { value: Climate; label: string }[] = [
+  { value: "cold", label: "寒い" },
+  { value: "normal", label: "普通" },
+  { value: "hot", label: "暑い" },
+];
+
+const isSku = (v: string) => RULES.some((r) => r.sku === v);
+
 export default function RipenessPage() {
   const grouped = useMemo(() => groupByCategory(RULES), []);
   const defaultSku = grouped[0]?.items[0]?.sku ?? "";
-  const [sku, setSku] = useState(defaultSku);
-  const [storage, setStorage] = useState<Storage>("room");
+
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const [receivedAt, setReceivedAt] = useState<string>(today);
+  const [sku, setSku] = useState<string>(defaultSku);
+  const [storage, setStorage] = useState<FruitStorage>("room");
   const [climate, setClimate] = useState<Climate>("normal");
   const [issues, setIssues] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ApiResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // URLクエリからsku初期化
+  /** URLクエリから sku 初期化（例: /ripeness?sku=melon） */
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     const qsSku = p.get("sku");
@@ -58,9 +87,9 @@ export default function RipenessPage() {
     setLoading(true);
     setError(null);
     setResult(null);
-  
-    // ▼ここからバリデーション
-    if (!sku || !RULES.some(r => r.sku === sku)) {
+
+    // ▼バリデーション
+    if (!sku || !isSku(sku)) {
       setError("果物の選択が正しくありません。");
       setLoading(false);
       return;
@@ -70,29 +99,35 @@ export default function RipenessPage() {
       setLoading(false);
       return;
     }
-    // ▲ここまでバリデーション
-  
+    // ▲ここまで
+
     try {
       const normalizedDate = receivedAt.replace(/\//g, "-");
       const res = await fetch("/api/ripeness", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sku, receivedAt: normalizedDate, storage, climate, issues }),
+        body: JSON.stringify({
+          sku,
+          receivedAt: normalizedDate,
+          storage,
+          climate,
+          issues,
+        }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "error");
-      setResult(json);
+      const json = (await res.json()) as ApiResult | { error: string };
+      if (!res.ok) throw new Error((json as any).error || "error");
+      setResult(json as ApiResult);
     } catch (e) {
-      setError(e.message);
+      setError(e instanceof Error ? e.message : "unknown error");
     } finally {
       setLoading(false);
     }
   };
-  
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
       <h1 className="text-2xl font-semibold mb-4">食べ頃アドバイス</h1>
+
       <ol className="space-y-4">
         <li>
           <label className="block text-sm mb-1">① 受け取った日</label>
@@ -105,19 +140,23 @@ export default function RipenessPage() {
         </li>
 
         <li>
-        <label className="block text-sm mb-1">② 果物</label>
-        <select
+          <label className="block text-sm mb-1">② 果物</label>
+          <select
             value={sku}
             onChange={(e) => setSku(e.target.value)}
-            className="border rounded px-3 py-2 w-full whitespace-normal">
-            {FRUITS.map((f) => (
-        <option key={f.sku} value={f.sku}>
-            {f.label}
-        </option>
-  ))}
-</select>
-
-      </li>
+            className="border rounded px-3 py-2 w-full whitespace-normal"
+          >
+            {grouped.map(({ category, items }) => (
+              <optgroup key={category} label={category}>
+                {items.map((it) => (
+                  <option key={it.sku} value={it.sku}>
+                    {it.label}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </li>
 
         <li>
           <label className="block text-sm mb-1">③ 保存環境</label>

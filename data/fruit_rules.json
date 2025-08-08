@@ -21,20 +21,20 @@
     },
   
     {
-      "sku": "suika-oodama",
-      "name": "大玉すいか",
-      "category": "すいか",
-      "ripen_room_days": 0,
-      "ripen_cool_days": 5,
-      "temp_advice": "涼しい場所または冷蔵庫で保存し、カット後はラップで包んで冷蔵し、2日以内にお召し上がりください。",
-      "ready_signs": ["叩くと低い音が響く", "ツルの周りが少しへこむ"],
-      "donts": ["高温放置", "カット後の室温放置"]
+        "sku": "suika-oodama",
+        "name": "大玉すいか",
+        "category": "すいか",
+        "ripen_room_days": 5,
+        "ripen_cool_days": 5,
+        "temp_advice": "丸ごとは風通しの良い冷暗所（常温）で保存。食べる直前に冷やす。カット後はラップで包み冷蔵し2日以内に。",
+        "ready_signs": ["叩くと低めの澄んだ音", "ツル元がややくぼむ"],
+        "donts": ["高温放置", "カット後の室温放置", "長期の丸ごと冷蔵"]
     },
     {
       "sku": "suika-raou-sweet",
       "name": "羅皇ザスウィート",
       "category": "すいか",
-      "ripen_room_days": 0,
+      "ripen_room_days": 5,
       "ripen_cool_days": 5,
       "temp_advice": "食べる直前に冷やしすぎないよう注意。カット後はラップで包み冷蔵庫で保存。",
       "ready_signs": ["叩くと鈍い音がする", "果皮の縞模様がはっきりしている"],
@@ -44,7 +44,7 @@
       "sku": "suika-kingorao",
       "name": "金色羅皇",
       "category": "すいか",
-      "ripen_room_days": 0,
+      "ripen_room_days": 5,
       "ripen_cool_days": 5,
       "temp_advice": "涼しい場所か冷蔵庫で保存。カット後は冷蔵で2日以内に消費。",
       "ready_signs": ["叩くとポンと低い音が響く"],
@@ -54,8 +54,8 @@
       "sku": "suika-kodama",
       "name": "小玉すいか",
       "category": "すいか",
-      "ripen_room_days": 0,
-      "ripen_cool_days": 4,
+      "ripen_room_days": 5,
+      "ripen_cool_days": 5,
       "temp_advice": "冷蔵庫（野菜室）で保存。カット後は冷蔵で1〜2日以内に。",
       "ready_signs": ["叩くとやや低い音がする", "果皮にツヤがある"],
       "donts": ["直射日光", "冷やしすぎ"]
@@ -65,8 +65,8 @@
       "sku": "ichigo",
       "name": "いちご",
       "category": "ベリー",
-      "ripen_room_days": 0,
-      "ripen_cool_days": 0,
+      "ripen_room_days": 5,
+      "ripen_cool_days": 5,
       "temp_advice": "ヘタをつけたまま洗わずにパックのまま野菜室。食べる直前に洗う。",
       "ready_signs": ["全体が赤く色づく", "ヘタの緑色が鮮やか"],
       "donts": ["洗ってから保存", "重ねて保存"]
@@ -76,7 +76,7 @@
       "sku": "mikan",
       "name": "みかん",
       "category": "柑橘類",
-      "ripen_room_days": 0,
+      "ripen_room_days": 5,
       "ripen_cool_days": 7,
       "temp_advice": "風通しの良い涼しい場所で保存。長期保存は野菜室で。",
       "ready_signs": ["皮の色が濃い", "ヘタが少ししなやか"],
@@ -93,26 +93,25 @@
       "donts": ["直射日光", "乾燥"]
     },
     {
-      "sku": "paul-kan",
-      "name": "パール柑",
-      "category": "柑橘類",
-      "ripen_room_days": 0,
-      "ripen_cool_days": 21,
-      "temp_advice": "冷暗所または野菜室で保存。乾燥防止に紙で包む。",
-      "ready_signs": ["重みがある", "香りが立つ"],
-      "donts": ["高温多湿", "傷つけたまま保存"]
+        "sku": "paul-kan",
+        "name": "パール柑",
+        "category": "柑橘類",
+        "ripen_room_days": 5,
+        "ripen_cool_days": 5,
+        "temp_advice": "冷暗所（常温）で保存。乾燥防止に紙で軽く包む。長期保存や高温環境の場合は野菜室も可（乾燥対策必須）。",
+        "ready_signs": ["重みがある", "香りが立つ"],
+        "donts": ["直射日光", "暖房直撃", "未カットでの長期冷蔵"]
     },
     {
-      "sku": "banpeiyu",
-      "name": "晩白柚",
-      "category": "柑橘類",
-      "ripen_room_days": 0,
-      "ripen_cool_days": 30,
-      "temp_advice": "冷暗所〜野菜室で保存。香り移り防止のため別保管。",
-      "ready_signs": ["重量感", "皮色が均一"],
-      "donts": ["直射日光", "暖房直撃"]
+        "sku": "banpeiyu",
+        "name": "晩白柚",
+        "category": "柑橘類",
+        "ripen_room_days": 7,
+        "ripen_cool_days": 7,
+        "temp_advice": "新聞紙で包んで直射日光の当たらない冷暗所（常温）で保存。乾燥と高温を避ける。長期なら定期的に天地返し。カット後のみ冷蔵。",
+        "ready_signs": ["重量感がある", "皮色が均一で香りが立つ"],
+        "donts": ["暖房直撃", "密閉袋での湿気こもり", "未カットでの長期冷蔵"]
     },
-  
     {
       "sku": "shine-muscat",
       "name": "シャインマスカット",

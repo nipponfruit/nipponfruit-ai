@@ -1,0 +1,22 @@
+[
+  {
+    "sku": "beni-haruka",
+    "name": "紅はるか",
+    "category": "さつまいも",
+    "ripen_room_days": 5,
+    "ripen_cool_days": 8,
+    "temp_advice": "13〜16℃の冷暗所で新聞紙に包んで保存。冷蔵庫は低温障害の恐れあり。",
+    "ready_signs": ["甘い香りが強まる", "切断面がしっとり"],
+    "donts": ["冷蔵長期保存", "直射日光"]
+  },
+  {
+    "sku": "shine-muscat",
+    "name": "シャインマスカット",
+    "category": "ぶどう",
+    "ripen_room_days": 0,
+    "ripen_cool_days": 0,
+    "temp_advice": "野菜室で保存。乾燥防止に紙で包む。食べる直前に洗う。",
+    "ready_signs": ["果粒に張りがある", "白い粉(ブルーム)が均一"],
+    "donts": ["常温での長期放置", "洗ってから保存"]
+  }
+]

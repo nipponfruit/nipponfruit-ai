@@ -146,7 +146,7 @@ setResult(data as ApiResult);
             type="date"
             value={receivedAt}
             onChange={(e) => setReceivedAt(e.target.value)}
-            className="border rounded px-3 py-2"
+            className="w-full h-11 rounded-lg border px-4 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
           />
         </li>
 
@@ -155,7 +155,7 @@ setResult(data as ApiResult);
           <select
             value={sku}
             onChange={(e) => setSku(e.target.value)}
-            className="border rounded px-3 py-2 w-full whitespace-normal"
+            className="w-full h-11 rounded-lg border px-4 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
           >
             {grouped.map(({ category, items }) => (
               <optgroup key={category} label={category}>
@@ -189,7 +189,7 @@ setResult(data as ApiResult);
         </li>
 
         <li>
-          <label className="block text-sm mb-1">④ 気温帯</label>
+        <label className="inline-flex items-center gap-2 mr-4 text-base">④ 気温帯</label>
           <div className="space-x-4">
             {CLIMATE_OPTIONS.map(({ value, label }) => (
               <label key={value}>
@@ -199,7 +199,7 @@ setResult(data as ApiResult);
                   value={value}
                   checked={climate === value}
                   onChange={() => setClimate(value)}
-                  className="mr-1"
+                  className="h-4 w-4 accent-amber-600"
                 />
                 {label}
               </label>
@@ -241,14 +241,57 @@ setResult(data as ApiResult);
       {error && <p className="mt-4 text-red-600">エラー: {error}</p>}
 
       {result && (
-        <section className="mt-6 border rounded p-4">
-          <p className="mb-2">
-            <b>目安の食べ頃：</b>
-            {result.readyDate}
-          </p>
-          <pre className="whitespace-pre-wrap text-sm">{result.summary}</pre>
-        </section>
-      )}
+  <section className="mt-8 rounded-2xl border border-amber-200 bg-amber-50/60 p-6 shadow-sm">
+    {/* ヘッダー行：バッジ＋品目名＋日付 */}
+    <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
+      <div className="flex items-center gap-2">
+        <span className="inline-flex items-center rounded-full bg-amber-200/80 px-3 py-1 text-xs font-semibold text-amber-900">
+          目安の食べ頃
+        </span>
+        <span className="text-sm text-amber-900/80">{result.name}</span>
+      </div>
+      <time
+        dateTime={result.readyDate}
+        className="text-4xl sm:text-5xl font-extrabold tracking-tight text-amber-900"
+      >
+        {result.readyDate}
+      </time>
+    </div>
+
+    {/* AIの回答部分 */}
+    <article className="text-base sm:text-lg leading-8 text-gray-800 whitespace-pre-wrap">
+      {result.summary}
+    </article>
+
+    {/* 補助フッター */}
+    <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+      <p className="text-xs text-gray-500">
+        実際の環境で差があります。目安としてご活用ください。
+      </p>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            navigator.clipboard.writeText(
+              `【食べ頃目安】${result.readyDate}\n${result.summary}`
+            )
+          }
+          className="rounded-lg border px-3 py-2 text-sm hover:bg-white/60 active:scale-[0.98] transition"
+        >
+          コピー
+        </button>
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="rounded-lg border px-3 py-2 text-sm hover:bg-white/60 active:scale-[0.98] transition"
+        >
+          印刷
+        </button>
+      </div>
+    </div>
+  </section>
+)}
+
 
       <p className="mt-6 text-xs text-gray-500">
         ※ 実際の環境で差があります。目安としてご活用ください。

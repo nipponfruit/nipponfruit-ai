@@ -1,27 +1,36 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 
+type Storage = "room" | "fridge" | "vegroom" | "cooldark";
+type Climate = "cold" | "normal" | "hot";
+
 const FRUITS = [
   { sku: "beni-haruka", label: "紅はるか" },
   { sku: "shine-muscat", label: "シャインマスカット" },
-];
+] as const;
+
+type ApiResult = {
+  sku: string;
+  name: string;
+  readyDate: string;
+  summary: string;
+};
 
 export default function RipenessPage() {
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [receivedAt, setReceivedAt] = useState(today);
-  const [sku, setSku] = useState(FRUITS[0].sku);
-  const [storage, setStorage] = useState<"room" | "fridge" | "vegroom" | "cooldark">("room");
-  const [climate, setClimate] = useState<"cold" | "normal" | "hot">("normal");
+  const [sku, setSku] = useState<(typeof FRUITS)[number]["sku"]>(FRUITS[0].sku);
+  const [storage, setStorage] = useState<Storage>("room");
+  const [climate, setClimate] = useState<Climate>("normal");
   const [issues, setIssues] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<ApiResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // URLクエリからsku初期化（QR連携用: /ripeness?sku=beni-haruka）
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     const qsSku = p.get("sku");
-    if (qsSku && FRUITS.some((f) => f.sku === qsSku)) setSku(qsSku);
+    if (qsSku && FRUITS.some((f) => f.sku === qsSku)) setSku(qsSku as any);
   }, []);
 
   const toggleIssue = (v: string) =>
@@ -32,9 +41,7 @@ export default function RipenessPage() {
     setError(null);
     setResult(null);
     try {
-      // 受取日を yyyy-mm-dd に統一
       const normalizedDate = receivedAt.replace(/\//g, "-");
-
       const res = await fetch("/api/ripeness", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -47,11 +54,15 @@ export default function RipenessPage() {
         }),
       });
 
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "error");
-      setResult(json);
-    } catch (e: any) {
-      setError(e.message);
+      const json: unknown = await res.json();
+      if (!res.ok) {
+        const msg =
+          (json as { error?: string })?.error ?? "error";
+        throw new Error(msg);
+      }
+      setResult(json as ApiResult);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "unknown error");
     } finally {
       setLoading(false);
     }
@@ -75,7 +86,7 @@ export default function RipenessPage() {
           <label className="block text-sm mb-1">② 果物</label>
           <select
             value={sku}
-            onChange={(e) => setSku(e.target.value)}
+            onChange={(e) => setSku(e.target.value as any)}
             className="border rounded px-3 py-2"
           >
             {FRUITS.map((f) => (
@@ -100,8 +111,8 @@ export default function RipenessPage() {
                   type="radio"
                   name="storage"
                   value={val}
-                  checked={storage === val}
-                  onChange={() => setStorage(val as any)}
+                  checked={storage === (val as Storage)}
+                  onChange={() => setStorage(val as Storage)}
                   className="mr-1"
                 />
                 {label}
@@ -123,8 +134,8 @@ export default function RipenessPage() {
                   type="radio"
                   name="climate"
                   value={val}
-                  checked={climate === val}
-                  onChange={() => setClimate(val as any)}
+                  checked={climate === (val as Climate)}
+                  onChange={() => setClimate(val as Climate)}
                   className="mr-1"
                 />
                 {label}

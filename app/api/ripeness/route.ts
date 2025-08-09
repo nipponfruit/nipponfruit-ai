@@ -4,6 +4,8 @@ import OpenAI from "openai";
 import rawRules from "@/data/fruit_rules.json";
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// モデルは環境変数で上書き可能。未指定なら gpt-5-nano を使用
+const MODEL = process.env.RIPENESS_MODEL ?? "gpt-5-nano";
 
 type Storage = "room" | "fridge" | "vegroom" | "cooldark";
 type Climate = "cold" | "normal" | "hot";
@@ -37,6 +39,7 @@ type Advice = {
 
 const rules: FruitRule[] = rawRules as FruitRule[];
 
+// ---------- helpers ----------
 function addDays(d: Date, n: number) {
   const t = new Date(d);
   t.setDate(t.getDate() + n);
@@ -61,25 +64,36 @@ function calcWindowDays(baseDays: number) {
   const end = baseDays + 1;
   return { start, end };
 }
+function ensureAdvice(base: Advice, windowStart: string, windowEnd: string): Advice {
+  return {
+    summaryMd:
+      base.summaryMd ||
+      "追加の提案は現在準備中です。保存環境や気温によって差が出るため、適宜点検しながら調整してください。",
+    smartTips: Array.isArray(base.smartTips) ? base.smartTips : [],
+    risks: Array.isArray(base.risks) ? base.risks : [],
+    uses: Array.isArray(base.uses) ? base.uses : [],
+    ripenessWindow: base.ripenessWindow ?? { start: windowStart, end: windowEnd },
+  };
+}
+function tryParseAdvice(raw: string): Advice | null {
+  if (!raw) return null;
 
-// Advice型ガード
-function isAdvice(v: unknown): v is Advice {
-  if (!v || typeof v !== "object") return false;
-  const o = v as Record<string, unknown>;
-  const isArr = (x: unknown) => Array.isArray(x) && x.every(i => typeof i === "string");
-  const okSummary = typeof o.summaryMd === "string";
-  const okTips = o.smartTips === undefined || isArr(o.smartTips);
-  const okRisks = o.risks === undefined || isArr(o.risks);
-  const okUses = o.uses === undefined || isArr(o.uses);
-  const okWindow =
-    o.ripenessWindow === undefined ||
-    (typeof o.ripenessWindow === "object" &&
-      o.ripenessWindow !== null &&
-      typeof (o.ripenessWindow as Record<string, unknown>).start === "string" &&
-      typeof (o.ripenessWindow as Record<string, unknown>).end === "string");
-  return okSummary && okTips && okRisks && okUses && okWindow;
+  if (raw.trim().startsWith("{")) {
+    try {
+      return JSON.parse(raw) as Advice;
+    } catch {}
+  }
+  const fence =
+    raw.match(/```json\s*([\s\S]*?)```/i) || raw.match(/```\s*([\s\S]*?)```/);
+  if (fence?.[1]) {
+    try {
+      return JSON.parse(fence[1]) as Advice;
+    } catch {}
+  }
+  return { summaryMd: raw, smartTips: [], risks: [], uses: [] };
 }
 
+// ---------- route ----------
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as Payload;
@@ -93,16 +107,26 @@ export async function POST(req: NextRequest) {
     }
 
     const rule = rules.find((r) => r.sku === body.sku);
-    if (!rule) return NextResponse.json({ error: "unknown sku" }, { status: 400 });
+    if (!rule) {
+      return NextResponse.json(
+        { error: `unknown sku: ${body.sku}` },
+        { status: 400 }
+      );
+    }
 
     const days = calcDays(rule, body.storage, body.climate);
-    const readyDate = addDays(new Date(receivedAt), days).toISOString().slice(0, 10);
+    const readyDate = addDays(new Date(receivedAt), days)
+      .toISOString()
+      .slice(0, 10);
 
     const { start, end } = calcWindowDays(days);
-    const windowStart = addDays(new Date(receivedAt), start).toISOString().slice(0, 10);
-    const windowEnd = addDays(new Date(receivedAt), end).toISOString().slice(0, 10);
+    const windowStart = addDays(new Date(receivedAt), start)
+      .toISOString()
+      .slice(0, 10);
+    const windowEnd = addDays(new Date(receivedAt), end)
+      .toISOString()
+      .slice(0, 10);
 
-    // 基本アドバイス
     const baseSummary =
       `目安の食べ頃: ${readyDate}\n` +
       `保存: ${rule.temp_advice}\n` +
@@ -114,7 +138,7 @@ export async function POST(req: NextRequest) {
       smartTips: [],
       risks: [],
       uses: [],
-      ripenessWindow: { start: windowStart, end: windowEnd }
+      ripenessWindow: { start: windowStart, end: windowEnd },
     };
 
     try {
@@ -127,60 +151,38 @@ ${baseSummary}
 【利用者の条件】
 果物: ${rule.name}（カテゴリ: ${rule.category}）
 受取日: ${receivedAt}
-保存環境: ${body.storage}（room=常温, cooldark=冷暗所, vegroom=野菜室, fridge=冷蔵庫）
+保存環境: ${body.storage}
 気温帯: ${body.climate}
 食べ頃ウィンドウ（目安）: ${windowStart}〜${windowEnd}
 ユーザーの悩み: ${(body.issues ?? []).join("、") || "特になし"}
 
 【タスク】
 上の基本アドバイスはそのままに、さらに役立つ「AI独自の追加提案」を作成。
-まず JSON で返す（キー: summaryMd, smartTips[], risks[], uses[], ripenessWindow{start,end,note?}）。
-JSONが難しい場合は、見出し＋箇条書きのMarkdownを返す。
-制約:
-- summaryMdは200〜400字程度。家庭環境差に触れ、断定は避ける。
-- smartTipsは具体ワザを最大3件。
-- risksは低温障害・乾燥・過熟の兆候と回避策を最大3件。
-- usesは余りや熟度に応じた簡単活用案を最大3件。
+必ずJSON形式（summaryMd, smartTips[], risks[], uses[], ripenessWindow{start,end,note?}）で返す。
 `;
 
+      // GPT-5 nano呼び出し
+      // @ts-ignore
       const resp = await client.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: MODEL,
         messages: [
           { role: "system", content: sys },
-          { role: "user", content: user }
+          { role: "user", content: user },
         ],
-        max_completion_tokens: 700
+        // nanoはmax_completion_tokens対応
+        // @ts-ignore
+        max_completion_tokens: 400,
+        temperature: 0.3,
       });
 
       const raw = resp.choices?.[0]?.message?.content?.trim() || "";
-
-      let parsed: Advice | null = null;
-
-      if (raw.startsWith("{")) {
-        try {
-          const candidate: unknown = JSON.parse(raw);
-          if (isAdvice(candidate)) parsed = candidate;
-        } catch { /* noop */ }
-      }
-
-      if (!parsed) {
-        const m = raw.match(/```json\s*([\s\S]*?)```/i) || raw.match(/```\s*([\s\S]*?)```/);
-        if (m?.[1]) {
-          try {
-            const candidate2: unknown = JSON.parse(m[1]);
-            if (isAdvice(candidate2)) parsed = candidate2;
-          } catch { /* noop */ }
-        }
-      }
-
-      if (parsed) {
-        advice = parsed;
-      } else if (raw) {
-        advice.summaryMd = raw;
-      }
+      const parsed = tryParseAdvice(raw);
+      if (parsed) advice = parsed;
     } catch (e) {
-      console.error("AI生成に失敗:", e);
+      console.warn("AI生成に失敗:", e);
     }
+
+    advice = ensureAdvice(advice, windowStart, windowEnd);
 
     return NextResponse.json({
       sku: rule.sku,
@@ -188,7 +190,7 @@ JSONが難しい場合は、見出し＋箇条書きのMarkdownを返す。
       readyDate,
       baseSummary,
       advice,
-      summary: baseSummary
+      summary: baseSummary,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "server error";

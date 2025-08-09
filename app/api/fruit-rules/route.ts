@@ -8,19 +8,23 @@ type RuleLite = {
   category?: string;
 };
 
-export async function GET() {
-  const rules = (rawRules as any[]).map((r) => ({
-    sku: String(r.sku),
-    name: String(r.name),
-    category: r.category ? String(r.category) : undefined,
-  })) as RuleLite[];
+type RawRule = { sku: unknown; name: unknown; category?: unknown };
 
-  // カテゴリ → 名前 の順で表示が安定するよう整列
-  rules.sort((a, b) => {
-    const ca = (a.category || "").localeCompare(b.category || "");
-    if (ca !== 0) return ca;
-    return a.name.localeCompare(b.name);
-  });
+export async function GET() {
+  // JSONを安全に型付けして整形
+  const rules: RuleLite[] = (rawRules as unknown as RawRule[])
+    .map((r) => ({
+      sku: String(r.sku ?? ""),
+      name: String(r.name ?? ""),
+      category: r.category != null ? String(r.category) : undefined,
+    }))
+    // UIのプルダウンが安定するように並べ替え
+    .sort((a, b) => {
+      const ca = a.category ?? "";
+      const cb = b.category ?? "";
+      if (ca !== cb) return ca.localeCompare(cb, "ja");
+      return a.name.localeCompare(b.name, "ja");
+    });
 
   return NextResponse.json({ rules });
 }

@@ -156,7 +156,7 @@ export default function RipenessPage() {
         {/* タイトル画像（public/ai-fruit-concierge.png を表示） */}
         <div className="mb-2">
           <Image
-            src="/ai-fruit-concierge.png"
+            src="/ai-fruit-concierge-20250810-0231.png"
             alt="AIフルーツコンシェルジュ"
             width={860}
             height={160}

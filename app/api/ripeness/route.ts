@@ -12,7 +12,7 @@ function normalizeAi(raw: any) {
   if (!raw || typeof raw !== "object") return { tips: [], risks: [], ideas: [] };
 
   // ありがちな別名も吸収
-  const tipsSrc  = raw.tips ?? raw.practicalTips ?? raw.suggestions ?? raw.tip ?? [];
+  const tipsSrc = raw.tips ?? raw.practicalTips ?? raw.suggestions ?? raw.tip ?? [];
   const risksSrc = raw.risks ?? raw.risk ?? [];
   const ideasSrc = raw.ideas ?? raw.uses ?? raw.idea ?? [];
 
@@ -24,8 +24,8 @@ function normalizeAi(raw: any) {
       .filter((s) => s.length > 0)
       .slice(0, 5);
 
-  let ai = {
-    tips:  toTextArray(tipsSrc),
+  const ai = {
+    tips: toTextArray(tipsSrc),
     risks: toTextArray(risksSrc),
     ideas: toTextArray(ideasSrc),
   };
@@ -41,8 +41,8 @@ function normalizeAi(raw: any) {
 function parseBody(reqBody: any) {
   const sku = String(reqBody?.sku ?? "").trim();
   const receivedAt = String(reqBody?.receivedAt ?? "").trim();
-  const storage = String(reqBody?.storage ?? "").trim();   // "room" | "fridge" | "vegroom" | …
-  const climate = String(reqBody?.climate ?? "").trim();   // "cold" | "normal" | "hot"
+  const storage = String(reqBody?.storage ?? "").trim(); // "room" | "fridge" | "vegroom" | …
+  const climate = String(reqBody?.climate ?? "").trim(); // "cold" | "normal" | "hot"
   const issues = Array.isArray(reqBody?.issues) ? reqBody.issues : [];
 
   if (!sku || !receivedAt) {
@@ -52,20 +52,23 @@ function parseBody(reqBody: any) {
 }
 
 // 仮：ベースの熟度・サマリはあなたの既存ロジックを置く
-async function getBaseAdvice({ sku, receivedAt, storage, climate, issues }: {
-  sku: string; receivedAt: string; storage: string; climate: string; issues: string[];
+async function getBaseAdvice(params: {
+  sku: string;
+  receivedAt: string;
+  storage: string;
+  climate: string;
+  issues: string[];
 }) {
-  // ここは既存の rules 計算（data/fruit_rules.json など）で置き換えてください
-  // ひとまずダミーで戻す
   const readyDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000) // +2日
-    .toISOString().slice(0, 10);
+    .toISOString()
+    .slice(0, 10);
 
   const baseSummary =
     `目安の食べ頃: ${readyDate}\n` +
     `保存: 野菜室で保存。点検しつつ調整してください。`;
 
   return {
-    sku,
+    sku: params.sku,
     readyDate,
     baseSummary,
   };
@@ -73,12 +76,15 @@ async function getBaseAdvice({ sku, receivedAt, storage, climate, issues }: {
 
 // OpenAI 呼び出し（追加提案3カテゴリを要求）
 async function callOpenAiForExtras(input: {
-  sku: string; receivedAt: string; storage: string; climate: string; issues: string[];
+  sku: string;
+  receivedAt: string;
+  storage: string;
+  climate: string;
+  issues: string[];
 }) {
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-  const prompt =
-`あなたは青果の保管・熟度アドバイザーです。
+  const prompt = `あなたは青果の保管・熟度アドバイザーです。
 対象: ${input.sku}
 受取日: ${input.receivedAt}
 保存環境: ${input.storage}
@@ -99,7 +105,7 @@ JSONのみで返答し、余計な説明やコードブロックは不要です�
     messages: [{ role: "user", content: prompt }],
     max_tokens: MAX_TOKENS,
     temperature: 0.4,
-    response_format: { type: "json_object" }, // JSON で返させる
+    response_format: { type: "json_object" },
   });
 
   const text = res.choices[0]?.message?.content ?? "{}";
@@ -118,23 +124,20 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const input = parseBody(body);
 
-    // ルールベースのベース情報
     const base = await getBaseAdvice(input);
 
-    // 追加提案（OpenAI）
-    let ai = { tips: [], risks: [], ideas: [] as string[] };
+    let aiResult = { tips: [], risks: [], ideas: [] as string[] };
     try {
-      ai = await callOpenAiForExtras(input);
+      aiResult = await callOpenAiForExtras(input);
     } catch (e) {
-      // 失敗してもAPIは成功させ、aiを空のまま返す
       console.error("openai error:", e);
     }
 
     return NextResponse.json(
       {
         ...base,
-        ai,                    // ← UI はここを見る
-        model: MODEL,          // デバッグ用に一時出力（困ったら消してOK）
+        ai: aiResult,
+        model: MODEL,
       },
       { status: 200 }
     );

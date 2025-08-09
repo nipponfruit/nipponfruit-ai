@@ -2,21 +2,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
-// ---- 設定 ---------------------------------------------------
-const MODEL = process.env.RIPENESS_MODEL?.trim() || "gpt-5-mini";
-const MAX_TOKENS = 400; // 念のための上限
+/** 追加提案3カテゴリの型 */
+type AiBlocks = { tips: string[]; risks: string[]; ideas: string[] };
+
+/** リクエストボディ（UI → API）の型 */
+type RipenessInput = {
+  sku: string;          // 例: "taishu-kaki"
+  receivedAt: string;   // "YYYY-MM-DD"
+  storage: string;      // "room" | "fridge" | "vegroom" など
+  climate: string;      // "cold" | "normal" | "hot"
+  issues: string[];     // 気になる点の自由入力配列
+};
+
+// ------------------------------------------------------------
+// 設定
+// ------------------------------------------------------------
+const MODEL = (process.env.RIPENESS_MODEL ?? "gpt-5-mini").trim();
+const MAX_TOKENS = 400;
+
+// ------------------------------------------------------------
+// ユーティリティ
 // ------------------------------------------------------------
 
-// AI応答の形ゆらぎを吸収して、UI が読む形に正規化する
-function normalizeAi(raw: any) {
-  if (!raw || typeof raw !== "object") return { tips: [], risks: [], ideas: [] };
+/** AI応答の形ゆらぎを吸収して UI が読む形に正規化 */
+function normalizeAi(raw: any): AiBlocks {
+  if (!raw || typeof raw !== "object") {
+    return { tips: [], risks: [], ideas: [] };
+  }
 
   // ありがちな別名も吸収
-  const tipsSrc = raw.tips ?? raw.practicalTips ?? raw.suggestions ?? raw.tip ?? [];
+  const tipsSrc  = raw.tips ?? raw.practicalTips ?? raw.suggestions ?? raw.tip ?? [];
   const risksSrc = raw.risks ?? raw.risk ?? [];
   const ideasSrc = raw.ideas ?? raw.uses ?? raw.idea ?? [];
 
-  const toTextArray = (v: any) =>
+  const toTextArray = (v: any): string[] =>
     (Array.isArray(v) ? v : [v])
       .filter(Boolean)
       .map((x) => String(x))
@@ -24,8 +43,8 @@ function normalizeAi(raw: any) {
       .filter((s) => s.length > 0)
       .slice(0, 5);
 
-  const ai = {
-    tips: toTextArray(tipsSrc),
+  const ai: AiBlocks = {
+    tips:  toTextArray(tipsSrc),
     risks: toTextArray(risksSrc),
     ideas: toTextArray(ideasSrc),
   };
@@ -37,13 +56,15 @@ function normalizeAi(raw: any) {
   return ai;
 }
 
-// リクエストボディのバリデーション（最低限）
-function parseBody(reqBody: any) {
-  const sku = String(reqBody?.sku ?? "").trim();
+/** リクエストボディのバリデーション（最低限） */
+function parseBody(reqBody: any): RipenessInput {
+  const sku        = String(reqBody?.sku ?? "").trim();
   const receivedAt = String(reqBody?.receivedAt ?? "").trim();
-  const storage = String(reqBody?.storage ?? "").trim(); // "room" | "fridge" | "vegroom" | …
-  const climate = String(reqBody?.climate ?? "").trim(); // "cold" | "normal" | "hot"
-  const issues = Array.isArray(reqBody?.issues) ? reqBody.issues : [];
+  const storage    = String(reqBody?.storage ?? "").trim();
+  const climate    = String(reqBody?.climate ?? "").trim();
+  const issues     = Array.isArray(reqBody?.issues)
+    ? reqBody.issues.map((s: unknown) => String(s)).filter(Boolean)
+    : [];
 
   if (!sku || !receivedAt) {
     throw new Error("missing required fields: sku/receivedAt");
@@ -51,37 +72,31 @@ function parseBody(reqBody: any) {
   return { sku, receivedAt, storage, climate, issues };
 }
 
-// 仮：ベースの熟度・サマリはあなたの既存ロジックを置く
-async function getBaseAdvice(params: {
-  sku: string;
-  receivedAt: string;
-  storage: string;
-  climate: string;
-  issues: string[];
-}) {
-  const readyDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000) // +2日
+/** ルールベースのベース情報（必要に応じて data/fruit_rules.json を用いた実装に差し替え） */
+async function getBaseAdvice(input: RipenessInput) {
+  // ここは簡易ダミー：+2日を食べ頃にする
+  const readyDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
     .toISOString()
     .slice(0, 10);
 
+  // 未使用警告を避けるため、受け取った条件もメッセージに織り込む
   const baseSummary =
-    `目安の食べ頃: ${readyDate}\n` +
-    `保存: 野菜室で保存。点検しつつ調整してください。`;
+    [
+      `目安の食べ頃: ${readyDate}`,
+      `保存: 現在の保存環境は「${input.storage || "不明"}」、気温帯は「${input.climate || "不明"}」。`,
+      input.issues.length ? `気になる点: ${input.issues.join("、")}` : "気になる点: 特になし",
+      "まずは野菜室で保存し、数日に一度点検して調整してください。"
+    ].join("\n");
 
   return {
-    sku: params.sku,
+    sku: input.sku,
     readyDate,
     baseSummary,
   };
 }
 
-// OpenAI 呼び出し（追加提案3カテゴリを要求）
-async function callOpenAiForExtras(input: {
-  sku: string;
-  receivedAt: string;
-  storage: string;
-  climate: string;
-  issues: string[];
-}) {
+/** OpenAI に追加提案（tips/risks/ideas）を生成させる */
+async function callOpenAiForExtras(input: RipenessInput): Promise<AiBlocks> {
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
   const prompt = `あなたは青果の保管・熟度アドバイザーです。
@@ -105,7 +120,7 @@ JSONのみで返答し、余計な説明やコードブロックは不要です�
     messages: [{ role: "user", content: prompt }],
     max_tokens: MAX_TOKENS,
     temperature: 0.4,
-    response_format: { type: "json_object" },
+    response_format: { type: "json_object" }, // JSON で返させる
   });
 
   const text = res.choices[0]?.message?.content ?? "{}";
@@ -118,31 +133,39 @@ JSONのみで返答し、余計な説明やコードブロックは不要です�
   return normalizeAi(parsed);
 }
 
-// ---- Route Handler ----------------------------------------------------------
+// ------------------------------------------------------------
+// Route Handler
+// ------------------------------------------------------------
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const input = parseBody(body);
 
+    // ルールベースのベース情報
     const base = await getBaseAdvice(input);
 
-    let aiResult = { tips: [], risks: [], ideas: [] as string[] };
+    // 追加提案（OpenAI）
+    let ai: AiBlocks = { tips: [], risks: [], ideas: [] };
     try {
-      aiResult = await callOpenAiForExtras(input);
+      ai = await callOpenAiForExtras(input);
     } catch (e) {
+      // 失敗してもAPIは成功させ、aiを空のまま返す
       console.error("openai error:", e);
     }
 
     return NextResponse.json(
       {
         ...base,
-        ai: aiResult,
-        model: MODEL,
+        ai,           // UI はここを見る
+        model: MODEL, // デバッグ確認用（不要なら削除OK）
       },
       { status: 200 }
     );
   } catch (e: any) {
     console.error(e);
-    return NextResponse.json({ error: e?.message ?? "bad request" }, { status: 400 });
+    return NextResponse.json(
+      { error: e?.message ?? "bad request" },
+      { status: 400 }
+    );
   }
 }

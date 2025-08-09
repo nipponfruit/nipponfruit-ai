@@ -4,7 +4,7 @@ import OpenAI from "openai";
 import rawRules from "@/data/fruit_rules.json";
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-// モデルは環境変数で上書き可能。未指定なら gpt-5-nano を使用
+// モデルは環境変数で上書き可。未指定なら gpt-5-nano を使用
 const MODEL = process.env.RIPENESS_MODEL ?? "gpt-5-nano";
 
 type Storage = "room" | "fridge" | "vegroom" | "cooldark";
@@ -81,14 +81,18 @@ function tryParseAdvice(raw: string): Advice | null {
   if (raw.trim().startsWith("{")) {
     try {
       return JSON.parse(raw) as Advice;
-    } catch {}
+    } catch {
+      /* noop */
+    }
   }
   const fence =
     raw.match(/```json\s*([\s\S]*?)```/i) || raw.match(/```\s*([\s\S]*?)```/);
   if (fence?.[1]) {
     try {
       return JSON.parse(fence[1]) as Advice;
-    } catch {}
+    } catch {
+      /* noop */
+    }
   }
   return { summaryMd: raw, smartTips: [], risks: [], uses: [] };
 }
@@ -161,16 +165,16 @@ ${baseSummary}
 必ずJSON形式（summaryMd, smartTips[], risks[], uses[], ripenessWindow{start,end,note?}）で返す。
 `;
 
-      // GPT-5 nano呼び出し
-      // @ts-ignore
+      // OpenAI 呼び出し
+      // @ts-expect-error OpenAI SDK の型が環境により max_completion_tokens を未定義としている場合があるため
       const resp = await client.chat.completions.create({
         model: MODEL,
         messages: [
           { role: "system", content: sys },
           { role: "user", content: user },
         ],
-        // nanoはmax_completion_tokens対応
-        // @ts-ignore
+        // nano 系は max_completion_tokens を推奨
+        // @ts-expect-error 同上
         max_completion_tokens: 400,
         temperature: 0.3,
       });
@@ -190,7 +194,7 @@ ${baseSummary}
       readyDate,
       baseSummary,
       advice,
-      summary: baseSummary,
+      summary: baseSummary, // 後方互換
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "server error";

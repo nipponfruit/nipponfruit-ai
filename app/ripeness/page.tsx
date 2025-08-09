@@ -164,7 +164,7 @@ export default function RipenessPage() {
       style={{ colorScheme: "light" as never }}
     >
       <div className="mx-auto max-w-3xl p-4 md:p-6">
-        <h1 className="text-3xl md:text-4xl font-bold mb-6">食べ頃アドバイス</h1>
+        <h1 className="text-3xl md:text-4xl font-bold mb-6">AIフルーツコンシェルジュ</h1>
 
         {/* form */}
         <div className="space-y-6 bg-white rounded-xl shadow-sm border p-4 md:p-6">

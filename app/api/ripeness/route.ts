@@ -165,19 +165,17 @@ ${baseSummary}
 必ずJSON形式（summaryMd, smartTips[], risks[], uses[], ripenessWindow{start,end,note?}）で返す。
 `;
 
-      // OpenAI 呼び出し
-      // @ts-expect-error OpenAI SDK の型が環境により max_completion_tokens を未定義としている場合があるため
-      const resp = await client.chat.completions.create({
-        model: MODEL,
-        messages: [
-          { role: "system", content: sys },
-          { role: "user", content: user },
-        ],
-        // nano 系は max_completion_tokens を推奨
-        // @ts-expect-error 同上
-        max_completion_tokens: 400,
-        temperature: 0.3,
-      });
+      // GPT-5 呼び出し（修正後）
+const resp = await client.chat.completions.create({
+  model: MODEL,
+  messages: [
+    { role: "system", content: sys },
+    { role: "user", content: user },
+  ],
+  // nano系などで使えるパラメータだけにする（temperatureは省略）
+  // 型の違いがあってもビルドは通る
+  ...( { max_completion_tokens: 400 } as Record<string, unknown> ),
+});
 
       const raw = resp.choices?.[0]?.message?.content?.trim() || "";
       const parsed = tryParseAdvice(raw);

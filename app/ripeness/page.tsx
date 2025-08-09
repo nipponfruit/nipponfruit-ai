@@ -1,5 +1,7 @@
+// app/ripeness/page.tsx
 "use client";
 
+import Image from "next/image";
 import React, { useEffect, useMemo, useState } from "react";
 
 /** ---------- Types ---------- **/
@@ -53,13 +55,7 @@ function todayStr() {
 /** ---------- UI parts ---------- **/
 function Spinner({ size = 18 }: { size?: number }) {
   return (
-    <svg
-      className="animate-spin"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
+    <svg className="animate-spin" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
       <circle
         className="opacity-25"
         cx="12"
@@ -69,11 +65,7 @@ function Spinner({ size = 18 }: { size?: number }) {
         strokeWidth="4"
         fill="none"
       />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-      />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
     </svg>
   );
 }
@@ -159,12 +151,22 @@ export default function RipenessPage() {
 
   return (
     // 常時白背景 & 黒文字固定（スマホ夜間モードでも）
-    <div
-      className="min-h-screen bg-white text-black"
-      style={{ colorScheme: "light" as never }}
-    >
+    <div className="min-h-screen bg-white text-black" style={{ colorScheme: "light" as never }}>
       <div className="mx-auto max-w-3xl p-4 md:p-6">
-        <h1 className="text-3xl md:text-4xl font-bold mb-6">AIフルーツコンシェルジュ</h1>
+        {/* タイトル画像（public/ai-fruit-concierge.png を表示） */}
+        <div className="mb-2">
+          <Image
+            src="/ai-fruit-concierge.png"
+            alt="AIフルーツコンシェルジュ"
+            width={860}
+            height={160}
+            priority
+            className="h-auto w-full max-w-[520px]"
+          />
+        </div>
+        <div className="mb-6 text-xs text-neutral-500">
+          Powered by <span className="font-semibold">NipponFruit</span>
+        </div>
 
         {/* form */}
         <div className="space-y-6 bg-white rounded-xl shadow-sm border p-4 md:p-6">
@@ -316,9 +318,7 @@ export default function RipenessPage() {
                 <h2 className="text-xl md:text-2xl font-semibold">基本アドバイス</h2>
                 <span className="text-xs md:text-sm opacity-60">ルールに基づく</span>
               </div>
-              <div className="mt-3 whitespace-pre-wrap leading-7">
-                {result.baseSummary}
-              </div>
+              <div className="mt-3 whitespace-pre-wrap leading-7">{result.baseSummary}</div>
             </div>
 
             {/* AI extra */}
@@ -374,9 +374,7 @@ export default function RipenessPage() {
                   </div>
                 </>
               ) : (
-                <div className="opacity-60 mt-3">
-                  （本日は追加提案を取得できませんでした）
-                </div>
+                <div className="opacity-60 mt-3">（本日は追加提案を取得できませんでした）</div>
               )}
             </div>
 

@@ -62,35 +62,26 @@ function calcWindowDays(baseDays: number) {
   return { start, end };
 }
 
-// === 追加: 環境変数の読み取り（ログはマスク） ===
-function readOpenAIKey() {
-  const key = process.env.OPENAI_API_KEY ?? "";
-  const masked = key ? `${key.slice(0, 4)}…(${key.length})` : "(missing)";
-  console.log("[ripeness] OPENAI_API_KEY:", masked);
-  return key;
+// Advice型ガード
+function isAdvice(v: unknown): v is Advice {
+  if (!v || typeof v !== "object") return false;
+  const o = v as Record<string, unknown>;
+  const isArr = (x: unknown) => Array.isArray(x) && x.every(i => typeof i === "string");
+  const okSummary = typeof o.summaryMd === "string";
+  const okTips = o.smartTips === undefined || isArr(o.smartTips);
+  const okRisks = o.risks === undefined || isArr(o.risks);
+  const okUses = o.uses === undefined || isArr(o.uses);
+  const okWindow =
+    o.ripenessWindow === undefined ||
+    (typeof o.ripenessWindow === "object" &&
+      o.ripenessWindow !== null &&
+      typeof (o.ripenessWindow as Record<string, unknown>).start === "string" &&
+      typeof (o.ripenessWindow as Record<string, unknown>).end === "string");
+  return okSummary && okTips && okRisks && okUses && okWindow;
 }
 
 export async function POST(req: NextRequest) {
   try {
-    // debug モード判定
-    const debug = req.nextUrl?.searchParams?.get("debug") === "1";
-    const openaiKey = readOpenAIKey();
-
-    if (debug) {
-      return NextResponse.json({
-        ok: true,
-        debug: {
-          hasKey: Boolean(openaiKey),
-          keyPrefix: openaiKey ? openaiKey.slice(0, 4) : null,
-          keyLength: openaiKey ? openaiKey.length : 0,
-          nodeEnv: process.env.NODE_ENV || null,
-          vercelEnv: process.env.VERCEL_ENV || null,
-          runtime: process.env.VERCEL ? "vercel" : "local",
-          note: "Environment variables require a redeploy after changes.",
-        },
-      });
-    }
-
     const body = (await req.json()) as Payload;
 
     const receivedAt = normalizeDate(body.receivedAt);
@@ -123,10 +114,9 @@ export async function POST(req: NextRequest) {
       smartTips: [],
       risks: [],
       uses: [],
-      ripenessWindow: { start: windowStart, end: windowEnd },
+      ripenessWindow: { start: windowStart, end: windowEnd }
     };
 
-    // OpenAI 呼び出し
     try {
       const sys =
         "あなたは果物保存と食べ頃案内の専門家。食品安全最優先。出力は日本語。";
@@ -137,57 +127,59 @@ ${baseSummary}
 【利用者の条件】
 果物: ${rule.name}（カテゴリ: ${rule.category}）
 受取日: ${receivedAt}
-保存環境: ${body.storage}
+保存環境: ${body.storage}（room=常温, cooldark=冷暗所, vegroom=野菜室, fridge=冷蔵庫）
 気温帯: ${body.climate}
 食べ頃ウィンドウ（目安）: ${windowStart}〜${windowEnd}
 ユーザーの悩み: ${(body.issues ?? []).join("、") || "特になし"}
 
 【タスク】
-基本アドバイスに加えて「AI独自の追加提案」をJSON形式で作成。
-キー: summaryMd, smartTips[], risks[], uses[], ripenessWindow{start,end,note?}
+上の基本アドバイスはそのままに、さらに役立つ「AI独自の追加提案」を作成。
+まず JSON で返す（キー: summaryMd, smartTips[], risks[], uses[], ripenessWindow{start,end,note?}）。
+JSONが難しい場合は、見出し＋箇条書きのMarkdownを返す。
+制約:
+- summaryMdは200〜400字程度。家庭環境差に触れ、断定は避ける。
+- smartTipsは具体ワザを最大3件。
+- risksは低温障害・乾燥・過熟の兆候と回避策を最大3件。
+- usesは余りや熟度に応じた簡単活用案を最大3件。
 `;
 
       const resp = await client.chat.completions.create({
-        model: "gpt-4o-mini", // 安定稼働用モデル
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: sys },
-          { role: "user", content: user },
+          { role: "user", content: user }
         ],
-        max_completion_tokens: 500,
+        max_completion_tokens: 700
       });
 
       const raw = resp.choices?.[0]?.message?.content?.trim() || "";
 
       let parsed: Advice | null = null;
+
       if (raw.startsWith("{")) {
         try {
-          parsed = JSON.parse(raw) as Advice;
-        } catch {}
+          const candidate: unknown = JSON.parse(raw);
+          if (isAdvice(candidate)) parsed = candidate;
+        } catch { /* noop */ }
       }
+
       if (!parsed) {
-        const m = raw.match(/```json\s*([\s\S]*?)```/i);
+        const m = raw.match(/```json\s*([\s\S]*?)```/i) || raw.match(/```\s*([\s\S]*?)```/);
         if (m?.[1]) {
           try {
-            parsed = JSON.parse(m[1]);
-          } catch {}
+            const candidate2: unknown = JSON.parse(m[1]);
+            if (isAdvice(candidate2)) parsed = candidate2;
+          } catch { /* noop */ }
         }
       }
 
-      if (parsed?.summaryMd) {
-        advice = {
-          summaryMd: parsed.summaryMd,
-          smartTips: parsed.smartTips ?? [],
-          risks: parsed.risks ?? [],
-          uses: parsed.uses ?? [],
-          ripenessWindow: parsed.ripenessWindow ?? { start: windowStart, end: windowEnd },
-        };
+      if (parsed) {
+        advice = parsed;
       } else if (raw) {
-        advice = { ...advice, summaryMd: raw };
+        advice.summaryMd = raw;
       }
-    } catch (e: any) {
-      const status = e?.status ?? e?.response?.status ?? null;
-      const code = e?.code ?? e?.response?.data?.error?.code ?? null;
-      console.error("AI生成に失敗:", { status, code, message: e?.message });
+    } catch (e) {
+      console.error("AI生成に失敗:", e);
     }
 
     return NextResponse.json({
@@ -196,9 +188,9 @@ ${baseSummary}
       readyDate,
       baseSummary,
       advice,
-      summary: baseSummary,
+      summary: baseSummary
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "server error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
